@@ -193,42 +193,9 @@ export function FloatingToolbar({
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => {
-                        const selection = window.getSelection()
-                        if (selection && selection.rangeCount > 0) {
-                          const range = selection.getRangeAt(0)
-                          const parentList = range.commonAncestorContainer.parentElement?.closest("ul")
-
-                          if (parentList) {
-                            // Store the selection
-                            const savedRange = range.cloneRange()
-
-                            // If we're in a list, unwrap the content instead of using outdent
-                            const listItems = Array.from(parentList.children)
-                            const fragment = document.createDocumentFragment()
-                            listItems.forEach((li) => {
-                              const p = document.createElement("p")
-                              p.innerHTML = li.innerHTML
-                              fragment.appendChild(p)
-                            })
-                            parentList.parentNode?.replaceChild(fragment, parentList)
-
-                            // Restore the selection
-                            selection.removeAllRanges()
-                            selection.addRange(savedRange)
-                          } else {
-                            // Create new list with proper styling
-                            document.execCommand("insertUnorderedList", false)
-                            const newList = range.commonAncestorContainer.parentElement?.closest("ul")
-                            if (newList) {
-                              newList.className = "my-0.5 list-disc pl-6"
-                              const items = newList.querySelectorAll("li")
-                              items.forEach((item) => {
-                                item.className = "my-0.5 leading-normal"
-                              })
-                            }
-                          }
-                          editorRef.current?.focus()
-                        }
+                        // Toggle unordered (bullet) list
+                        document.execCommand("insertUnorderedList");
+                        editorRef.current?.focus();
                       }}
                     >
                       <List className="h-4 w-4" />
@@ -244,42 +211,9 @@ export function FloatingToolbar({
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => {
-                        const selection = window.getSelection()
-                        if (selection && selection.rangeCount > 0) {
-                          const range = selection.getRangeAt(0)
-                          const parentList = range.commonAncestorContainer.parentElement?.closest("ol")
-
-                          if (parentList) {
-                            // Store the selection
-                            const savedRange = range.cloneRange()
-
-                            // If we're in a list, unwrap the content instead of using outdent
-                            const listItems = Array.from(parentList.children)
-                            const fragment = document.createDocumentFragment()
-                            listItems.forEach((li) => {
-                              const p = document.createElement("p")
-                              p.innerHTML = li.innerHTML
-                              fragment.appendChild(p)
-                            })
-                            parentList.parentNode?.replaceChild(fragment, parentList)
-
-                            // Restore the selection
-                            selection.removeAllRanges()
-                            selection.addRange(savedRange)
-                          } else {
-                            // Create new list with proper styling
-                            document.execCommand("insertOrderedList", false)
-                            const newList = range.commonAncestorContainer.parentElement?.closest("ol")
-                            if (newList) {
-                              newList.className = "my-0.5 list-decimal pl-6"
-                              const items = newList.querySelectorAll("li")
-                              items.forEach((item) => {
-                                item.className = "my-0.5 leading-normal"
-                              })
-                            }
-                          }
-                          editorRef.current?.focus()
-                        }
+                        // Toggle ordered (numbered) list
+                        document.execCommand("insertOrderedList");
+                        editorRef.current?.focus();
                       }}
                     >
                       <ListOrdered className="h-4 w-4" />

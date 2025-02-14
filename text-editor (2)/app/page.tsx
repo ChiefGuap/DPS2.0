@@ -1,7 +1,7 @@
 "use client"
 
-import TextEditor from "../text-editor"
+import TextEditor from "../components/text-editor"; // Adjust path if needed
 
-export default function SyntheticV0PageForDeployment() {
-  return <TextEditor />
+export default function Page() {
+  return <TextEditor />;
 }
