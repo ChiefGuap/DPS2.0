@@ -52,16 +52,19 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('edit-document', async ({ docId, content }) => {
+  socket.on('edit-document', ({ docId, content }) => {
+    // Broadcast real-time updates to the document room
+    socket.to(docId).emit('update-document', content);
+  });
+
+  socket.on('save-document', async ({ docId, content }) => {
     try {
       const { error } = await supabase.from('documents').upsert([{ id: docId, content }]);
       if (error) {
         console.error('Error saving document:', error);
-        return;
       }
-      io.to(docId).emit('update-document', content);
     } catch (err) {
-      console.error('Unexpected error saving document:', err);
+      console.error('Unexpected error in save-document event:', err);
     }
   });
 

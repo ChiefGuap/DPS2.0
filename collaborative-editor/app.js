@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 
 // Note: Updated port to match the server's port (5001)
-const socket = io('http://localhost:5001');
+const socket = io(process.env.NEXT_PUBLIC_BASE_URL);
 
 const App = () => {
   const [docId, setDocId] = useState('default');
@@ -10,6 +10,7 @@ const App = () => {
   const [comments, setComments] = useState([]);
   const [comment, setComment] = useState('');
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     socket.emit('join-document', docId);
@@ -37,6 +38,11 @@ const App = () => {
   const handleEdit = (e) => {
     setContent(e.target.value);
     socket.emit('edit-document', { docId, content: e.target.value });
+    // Debounce saving document
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      socket.emit('save-document', { docId, content: e.target.value });
+    }, 1000);
   };
 
   const handleComment = () => {
