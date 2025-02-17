@@ -59,7 +59,11 @@ io.on('connection', (socket) => {
 
   socket.on('save-document', async ({ docId, content }) => {
     try {
-      const { error } = await supabase.from('documents').upsert([{ id: docId, content }]);
+      const { error } = await supabase.from('documents').upsert([{ 
+        id: docId, 
+        content, 
+        team_id: 1  // team_id added
+      }]);
       if (error) {
         console.error('Error saving document:', error);
       }

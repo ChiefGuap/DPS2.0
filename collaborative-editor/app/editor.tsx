@@ -226,10 +226,14 @@ export default function Editor() {
         .maybeSingle();
 
       if (!data) {
-        // No document found—create one with default content.
+        // No document found—create one with default content and team_id
         const { data: newData, error: insertError } = await supabase
           .from("documents")
-          .insert([{ id: docId, content: "" }])
+          .insert([{ 
+            id: docId, 
+            content: "", 
+            team_id: 1  // team_id added
+          }])
           .maybeSingle();
         if (insertError) {
           console.error("Error inserting default document:", insertError);
