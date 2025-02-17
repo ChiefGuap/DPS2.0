@@ -3,14 +3,15 @@ import { supabase } from '../lib/supabaseClient';
 
 function GoogleLoginButton() {
   const handleGoogleLogin = async () => {
+    const redirectPath = localStorage.getItem('redirectPath');
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?redirectPath=${redirectPath || '/'}`
+      }
     });
     if (error) {
       console.error('Error logging in with Google:', error.message);
-    } else {
-      // Supabase will redirect to Google’s sign-in page
-      // Then back to your callback URL
     }
   };
 

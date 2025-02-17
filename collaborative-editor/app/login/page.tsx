@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import GoogleLoginButton from "../../components/login";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const [session, setSession] = useState<any>(null);
@@ -16,17 +17,41 @@ export default function LoginPage() {
       } = await supabase.auth.getSession();
       setSession(session);
       if (session) {
-        router.push("/");
+        const email = session.user.email;
+        if (!email?.endsWith('@ucdavis.edu')) {
+          await supabase.auth.signOut();
+          toast.error('Please use your UC Davis email to sign in');
+          return;
+        }
+        
+        // Only redirect to stored path, don't fallback to homepage
+        const redirectPath = localStorage.getItem('redirectPath');
+        if (redirectPath) {
+          localStorage.removeItem('redirectPath');
+          router.push(redirectPath);
+        }
       }
     };
 
     getSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (event, session) => {
         setSession(session);
         if (session) {
-          router.push("/");
+          const email = session.user.email;
+          if (!email?.endsWith('@ucdavis.edu')) {
+            await supabase.auth.signOut();
+            toast.error('Please use your UC Davis email to sign in');
+            return;
+          }
+          
+          // Only redirect to stored path, don't fallback to homepage
+          const redirectPath = localStorage.getItem('redirectPath');
+          if (redirectPath) {
+            localStorage.removeItem('redirectPath');
+            router.push(redirectPath);
+          }
         }
       }
     );
