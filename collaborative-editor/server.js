@@ -38,7 +38,7 @@ io.on('connection', (socket) => {
         .from('documents')
         .select('content')
         .eq('id', docId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error(`Error loading document ${docId}:`, error);
