@@ -391,6 +391,7 @@ export default function Editor() {
                   {comm}
                 </div>
               ))}
+              
             </ScrollArea>
             <form onSubmit={handleCommentSubmit} className="mt-4 flex gap-2">
               <TextareaAutosize
