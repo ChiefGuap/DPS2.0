@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io, type Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,6 +26,7 @@ import {
   Redo,
 } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
+import { toast } from "sonner";
 
 // Basic MenuBar using execCommand for formatting
 const MenuBar = ({
@@ -139,6 +140,7 @@ export default function Editor() {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const isRemoteUpdateRef = useRef(false);
+  const [loading, setLoading] = useState(true);
 
   // Logout handler
   const handleLogout = async () => {
@@ -182,18 +184,46 @@ export default function Editor() {
         data: { session },
       } = await supabase.auth.getSession();
       setSession(session);
+      
       if (!session) {
+        // Store the current path before redirecting
+        localStorage.setItem('redirectPath', '/editor');
         router.push("/login");
+        return;
       }
+      
+      // Check email domain after session exists
+      const email = session.user.email;
+      if (!email?.endsWith('@ucdavis.edu')) {
+        await supabase.auth.signOut();
+        toast.error('Please use your UC Davis email to sign in');
+        localStorage.setItem('redirectPath', '/editor');
+        router.push("/login");
+        return;
+      }
+      
+      setLoading(false);
     };
 
     getSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         setSession(session);
         if (!session) {
+          localStorage.setItem('redirectPath', '/editor');
           router.push("/login");
+          return;
+        }
+
+        // Check email domain after session exists
+        const email = session.user.email;
+        if (!email?.endsWith('@ucdavis.edu')) {
+          await supabase.auth.signOut();
+          toast.error('Please use your UC Davis email to sign in');
+          localStorage.setItem('redirectPath', '/editor');
+          router.push("/login");
+          return;
         }
       }
     );
@@ -295,8 +325,12 @@ export default function Editor() {
     setComment("");
   };
 
-  if (!session) {
+  if (loading) {
     return <div>Loading...</div>;
+  }
+
+  if (!session) {
+    return null;
   }
 
   return (
