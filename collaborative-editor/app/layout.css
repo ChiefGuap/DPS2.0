@@ -1,0 +1,105 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #0a3d62;
+  color: #ffffff;
+}
+
+.navbar {
+  background-color: #333;
+  padding: 10px 0;
+}
+
+.navbar-container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.navbar a {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 1em;
+  transition: color 0.3s;
+}
+
+.navbar a:hover {
+  color: #ffa502;
+}
+
+.landing-page {
+  text-align: center;
+  padding: 50px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-around;
+  margin: 50px 0;
+}
+
+.stat-item {
+  font-family: 'Arial', sans-serif;
+}
+
+.stat-item h2 {
+  font-size: 3em;
+  margin: 0;
+  color: #7bed9f;
+}
+
+.stat-item p {
+  font-size: 1.2em;
+  margin: 5px 0 0;
+}
+
+.sponsor-button {
+  background-color: #ffa502;
+  border: none;
+  border-radius: 25px;
+  padding: 10px 20px;
+  font-size: 1em;
+  color: #0a3d62;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.sponsor-button:hover {
+  background-color: #ff7f50;
+}
+
+/* Space-themed elements */
+.landing-page::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  left: -50px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, #ffffff 0%, transparent 70%);
+  opacity: 0.5;
+  animation: float 6s ease-in-out infinite;
+}
+
+.landing-page::after {
+  content: '';
+  position: absolute;
+  bottom: -50px;
+  right: -50px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #ffffff 0%, transparent 70%);
+  opacity: 0.3;
+  animation: float 8s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(20px);
+  }
+} 
