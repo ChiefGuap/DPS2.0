@@ -1,132 +1,29 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { io, type Socket } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "sonner";
+import TextareaAutosize from "react-textarea-autosize";
 import {
   Bold,
   Italic,
+  Underline,
   List,
-  Heading2,
+  ListOrdered,
   TableIcon,
-  Code,
-  Quote,
-  MessageCircle,
-  Send,
+  Palette,
   AlignLeft,
   AlignCenter,
   AlignRight,
-  ListOrdered,
-  Undo,
-  Redo,
+  Type,
 } from "lucide-react";
-import TextareaAutosize from "react-textarea-autosize";
-import { toast } from "sonner";
-
-// Basic MenuBar using execCommand for formatting
-const MenuBar = ({
-  onBold,
-  onItalic,
-  onHeading,
-  onBulletList,
-  onOrderedList,
-  onCode,
-  onBlockquote,
-  onAlignLeft,
-  onAlignCenter,
-  onAlignRight,
-  onUndo,
-  onRedo,
-}: {
-  onBold: () => void;
-  onItalic: () => void;
-  onHeading: () => void;
-  onBulletList: () => void;
-  onOrderedList: () => void;
-  onCode: () => void;
-  onBlockquote: () => void;
-  onAlignLeft: () => void;
-  onAlignCenter: () => void;
-  onAlignRight: () => void;
-  onUndo: () => void;
-  onRedo: () => void;
-}) => {
-  return (
-    <div className="border-b p-2 flex flex-wrap gap-1">
-      <Button variant="ghost" size="sm" onClick={onBold}>
-        <Bold className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onItalic}>
-        <Italic className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onHeading}>
-        <Heading2 className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onBulletList}>
-        <List className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onOrderedList}>
-        <ListOrdered className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onCode}>
-        <Code className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onBlockquote}>
-        <Quote className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onAlignLeft}>
-        <AlignLeft className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onAlignCenter}>
-        <AlignCenter className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onAlignRight}>
-        <AlignRight className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onUndo}>
-        <Undo className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onRedo}>
-        <Redo className="h-4 w-4" />
-      </Button>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="sm">
-            <TableIcon className="h-4 w-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64">
-          <div className="grid gap-2">
-            <div className="text-sm font-medium">Insert Table</div>
-            <div className="grid grid-cols-5 gap-1">
-              {Array.from({ length: 25 }).map((_, i) => {
-                const rows = Math.floor(i / 5) + 1;
-                const cols = (i % 5) + 1;
-                return (
-                  <div
-                    key={i}
-                    className="w-6 h-6 border rounded hover:bg-primary/20 cursor-pointer"
-                    onClick={() => {
-                      alert(`Insert table ${rows}x${cols} - not implemented`);
-                    }}
-                  />
-                );
-              })}
-            </div>
-            <div className="text-xs text-muted-foreground text-center">
-              Select table dimensions
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
-};
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Editor() {
   const router = useRouter();
@@ -137,160 +34,85 @@ export default function Editor() {
   const [comments, setComments] = useState<string[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
+  const saveTimeoutRef = useRef<number | null>(null);
   const isRemoteUpdateRef = useRef(false);
   const [loading, setLoading] = useState(true);
 
-  // Logout handler
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error logging out:", error.message);
-    } else {
-      router.push("/login");
-    }
-  };
+  // Text editor state and ref
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [tableSize, setTableSize] = useState({ rows: 2, cols: 2 });
+  const [heading, setHeading] = useState("p");
 
-  // Formatting functions using document.execCommand
-  const handleBold = () => document.execCommand("bold", false);
-  const handleItalic = () => document.execCommand("italic", false);
-  const handleHeading = () => document.execCommand("formatBlock", false, "H2");
-  const handleBulletList = () => document.execCommand("insertUnorderedList", false);
-  const handleOrderedList = () => document.execCommand("insertOrderedList", false);
-  const handleCode = () => document.execCommand("formatBlock", false, "PRE");
-  const handleBlockquote = () => document.execCommand("formatBlock", false, "BLOCKQUOTE");
-  const handleAlignLeft = () => document.execCommand("justifyLeft", false);
-  const handleAlignCenter = () => document.execCommand("justifyCenter", false);
-  const handleAlignRight = () => document.execCommand("justifyRight", false);
-  const handleUndo = () => document.execCommand("undo", false);
-  const handleRedo = () => document.execCommand("redo", false);
-
-  // onInput handler for the contentEditable div
-  const handleInput = () => {
-    if (isRemoteUpdateRef.current) return;
-    const content = editorRef.current?.innerHTML || "";
-    socketRef.current?.emit("edit-document", { docId, content });
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      socketRef.current?.emit("save-document", { docId, content });
-    }, 1000);
-  };
-
-  // Check auth status
+  // Check authentication
   useEffect(() => {
     const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
-      
       if (!session) {
-        // Store the current path before redirecting
-        localStorage.setItem('redirectPath', '/editor');
+        localStorage.setItem("redirectPath", "/editor");
         router.push("/login");
         return;
       }
-      
-      // Check email domain after session exists
       const email = session.user.email;
-      if (!email?.endsWith('@ucdavis.edu')) {
+      if (!email?.endsWith("@ucdavis.edu")) {
         await supabase.auth.signOut();
-        toast.error('Please use your UC Davis email to sign in');
-        localStorage.setItem('redirectPath', '/editor');
+        toast.error("Use UC Davis email");
+        localStorage.setItem("redirectPath", "/editor");
         router.push("/login");
         return;
       }
-      
       setLoading(false);
     };
 
     getSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        if (!session) {
-          localStorage.setItem('redirectPath', '/editor');
-          router.push("/login");
-          return;
-        }
-
-        // Check email domain after session exists
-        const email = session.user.email;
-        if (!email?.endsWith('@ucdavis.edu')) {
-          await supabase.auth.signOut();
-          toast.error('Please use your UC Davis email to sign in');
-          localStorage.setItem('redirectPath', '/editor');
-          router.push("/login");
-          return;
-        }
-      }
-    );
-
-    return () => {
-      authListener?.subscription?.unsubscribe();
-    };
+    const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
+      setSession(session);
+      if (!session) router.push("/login");
+    });
+    return () => authListener?.subscription?.unsubscribe();
   }, [router]);
 
-  // Set up socket connection and listeners
+  // Setup socket connection
   useEffect(() => {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5001";
-    console.log("Connecting socket to:", baseUrl);
-
     const socketIo = io(baseUrl, { transports: ["websocket"] });
     setSocket(socketIo);
     socketRef.current = socketIo;
 
     socketIo.on("connect", () => {
-      console.log("Connected:", socketIo.id);
       setConnected(true);
       socketIo.emit("join-document", docId);
     });
 
-    socketIo.on("load-document", async (documentContent: string) => {
-      let { data, error } = await supabase
+    socketIo.on("disconnect", () => {
+      setConnected(false);
+    });
+
+    socketIo.on("load-document", async (serverContent: string) => {
+      const { data, error } = await supabase
         .from("documents")
+        .upsert({ id: docId, content: "", team_id: 1 })
         .select("*")
-        .eq("id", docId)
-        .maybeSingle();
-
-      if (!data) {
-        // No document found—create one with default content and team_id
-        const { data: newData, error: insertError } = await supabase
-          .from("documents")
-          .insert([{ 
-            id: docId, 
-            content: "", 
-            team_id: 1  // team_id added
-          }])
-          .maybeSingle();
-        if (insertError) {
-          console.error("Error inserting default document:", insertError);
-          return;
-        }
-        data = newData;
+        .single();
+      if (error) {
+        console.error("Error upserting document:", error);
+        return;
       }
-
-      // Emit the document content to the socket (fallback if undefined)
-      socketIo.emit("load-document", (data && data.content) || "");
-
+      const contentToLoad = data?.content || "";
+      socketIo.emit("load-document", contentToLoad);
       isRemoteUpdateRef.current = true;
       if (editorRef.current) {
-        editorRef.current.innerHTML = documentContent;
+        editorRef.current.innerHTML = serverContent || contentToLoad;
       }
-      setTimeout(() => {
-        isRemoteUpdateRef.current = false;
-      }, 100);
+      setTimeout(() => (isRemoteUpdateRef.current = false), 100);
     });
 
     socketIo.on("update-document", (newContent: string) => {
       if (editorRef.current && editorRef.current.innerHTML !== newContent) {
         isRemoteUpdateRef.current = true;
         editorRef.current.innerHTML = newContent;
-        setTimeout(() => {
-          isRemoteUpdateRef.current = false;
-        }, 100);
+        setTimeout(() => (isRemoteUpdateRef.current = false), 100);
       }
     });
 
@@ -305,110 +127,267 @@ export default function Editor() {
     };
   }, [docId]);
 
-  // Handle comment form submission, saving comment to database
+  // Comment submission
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim()) return;
-    
-    // Emit comment via socket
     socket?.emit("add-comment", { docId, comment });
     setComments((prev) => [...prev, comment]);
-    
-    // Save comment to Supabase "comments" table
-    const { error } = await supabase
-      .from("comments")
-      .insert([{ doc_id: docId, comment }]);
-    if (error) {
-      console.error("Error saving comment:", error.message);
-    }
-    
+    const { error } = await supabase.from("comments").insert([{ doc_id: docId, comment }]);
+    if (error) console.error("Error:", error.message);
     setComment("");
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  // Logout function
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
-  if (!session) {
-    return null;
-  }
+  // Editor functions
+  const formatText = (command: string, value = "") => {
+    if (command === "formatBlock") {
+      if (value === "p") {
+        document.execCommand("formatBlock", false, "<p>");
+      } else if (value.startsWith("h")) {
+        document.execCommand("formatBlock", false, `<${value}>`);
+      } else {
+        document.execCommand(command, false, value);
+      }
+    } else {
+      document.execCommand(command, false, value);
+    }
+    editorRef.current?.focus();
+  };
+
+  const createTable = (rows: number, cols: number) => {
+    const table = document.createElement("table");
+    table.className = "border-collapse border w-full my-4";
+    for (let i = 0; i < rows; i++) {
+      const row = table.insertRow();
+      for (let j = 0; j < cols; j++) {
+        const cell = row.insertCell();
+        cell.className = "border p-2";
+        cell.contentEditable = "true";
+        cell.innerHTML = `Cell ${j + 1}`;
+      }
+    }
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.insertNode(table);
+    }
+  };
+
+  const handleInput = () => {
+    if (isRemoteUpdateRef.current) return;
+    const content = editorRef.current?.innerHTML || "";
+    socketRef.current?.emit("edit-document", { docId, content });
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = window.setTimeout(() => {
+      socketRef.current?.emit("save-document", { docId, content });
+    }, 1000);
+  };
+
+  const handleHeadingChange = (value: string) => {
+    setHeading(value);
+    formatText("removeFormat");
+    formatText("formatBlock", value);
+  };
+
+  if (loading || !session) return <div>Loading...</div>;
 
   return (
-    <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
-      <div className="space-y-4">
-        <Card className="border shadow-lg">
-          <CardHeader className="border-b pb-3">
-            <CardTitle className="flex items-center justify-between text-lg">
-              <div className="flex items-center space-x-2">
-                <span>Document Editor</span>
-                <span
-                  className={`h-3 w-3 rounded-full ${
-                    connected ? "bg-green-500" : "bg-red-500"
-                  }`}
-                />
-              </div>
-              <Button variant="secondary" onClick={handleLogout}>
-                Logout
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <MenuBar
-            onBold={handleBold}
-            onItalic={handleItalic}
-            onHeading={handleHeading}
-            onBulletList={handleBulletList}
-            onOrderedList={handleOrderedList}
-            onCode={handleCode}
-            onBlockquote={handleBlockquote}
-            onAlignLeft={handleAlignLeft}
-            onAlignCenter={handleAlignCenter}
-            onAlignRight={handleAlignRight}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
+    <div className="space-y-4">
+      {/* Header with indicator dot */}
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold">Document Editor</h2>
+          <span
+            className={`h-3 w-3 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`}
           />
-          <CardContent className="p-0">
-            <div
-              className="min-h-[500px] p-4 cursor-text border"
-              contentEditable
-              ref={editorRef}
-              onInput={handleInput}
-            />
-          </CardContent>
-        </Card>
+        </div>
+        <Button variant="secondary" onClick={handleLogout}>
+          Logout
+        </Button>
       </div>
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" />
-              Comments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[300px] w-full rounded-md border p-4">
-              {comments.map((comm, index) => (
-                <div key={index} className="mb-2 rounded-lg bg-muted p-2 text-sm">
-                  {comm}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Text Editor */}
+        <div className="w-full max-w-4xl mx-auto p-4 space-y-4">
+          <div className="flex flex-wrap gap-2 p-2 bg-muted rounded-lg items-center">
+            <Select onValueChange={handleHeadingChange}>
+              <SelectTrigger className="w-[180px] h-9 bg-background relative z-50">
+                <div className="flex items-center gap-2">
+                  <Type className="h-4 w-4" />
+                  <SelectValue placeholder="Text style" />
                 </div>
-              ))}
-              
-            </ScrollArea>
-            <form onSubmit={handleCommentSubmit} className="mt-4 flex gap-2">
-              <TextareaAutosize
-                minRows={3}
-                maxRows={10}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Add a comment..."
-                className="flex-1 p-2 border border-gray-300 rounded"
-              />
-              <Button type="submit" size="icon">
-                <Send className="h-4 w-4" />
-                <span className="sr-only">Send comment</span>
+              </SelectTrigger>
+              <SelectContent position="popper" className="w-[180px] z-50">
+                <SelectItem value="p" className="flex items-center gap-2">
+                  <span className="text-base font-normal">Normal</span>
+                </SelectItem>
+                <SelectItem value="h1" className="flex items-center gap-2">
+                  <span className="text-2xl font-bold">Heading 1</span>
+                </SelectItem>
+                <SelectItem value="h2" className="flex items-center gap-2">
+                  <span className="text-xl font-bold">Heading 2</span>
+                </SelectItem>
+                <SelectItem value="h3" className="flex items-center gap-2">
+                  <span className="text-lg font-bold">Heading 3</span>
+                </SelectItem>
+                <SelectItem value="h4" className="flex items-center gap-2">
+                  <span className="text-base font-bold">Heading 4</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" onClick={() => formatText("bold")}>
+                <Bold className="h-4 w-4" />
               </Button>
-            </form>
-          </CardContent>
-        </Card>
+              <Button variant="ghost" size="icon" onClick={() => formatText("italic")}>
+                <Italic className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => formatText("underline")}>
+                <Underline className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" onClick={() => formatText("insertUnorderedList")}>
+                <List className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => formatText("insertOrderedList")}>
+                <ListOrdered className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" onClick={() => formatText("justifyLeft")}>
+                <AlignLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => formatText("justifyCenter")}>
+                <AlignCenter className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => formatText("justifyRight")}>
+                <AlignRight className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Palette className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-40">
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    "red",
+                    "orange",
+                    "yellow",
+                    "green",
+                    "blue",
+                    "purple",
+                    "pink",
+                    "gray",
+                    "black",
+                    "white",
+                  ].map((color) => (
+                    <Button
+                      key={color}
+                      variant="ghost"
+                      className="w-6 h-6 p-0"
+                      style={{ backgroundColor: color }}
+                      onClick={() => formatText("foreColor", color)}
+                    />
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <TableIcon className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64">
+                <div className="grid gap-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Rows: {tableSize.rows}</span>
+                    <input
+                      type="range"
+                      min="1"
+                      max="8"
+                      value={tableSize.rows}
+                      onChange={(e) =>
+                        setTableSize((prev) => ({ ...prev, rows: Number.parseInt(e.target.value) }))
+                      }
+                      className="w-20"
+                    />
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Columns: {tableSize.cols}</span>
+                    <input
+                      type="range"
+                      min="1"
+                      max="8"
+                      value={tableSize.cols}
+                      onChange={(e) =>
+                        setTableSize((prev) => ({ ...prev, cols: Number.parseInt(e.target.value) }))
+                      }
+                      className="w-20"
+                    />
+                  </div>
+                  <Button onClick={() => createTable(tableSize.rows, tableSize.cols)}>
+                    Insert Table
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div
+            ref={editorRef}
+            className="min-h-[300px] w-full border rounded-lg p-4 focus:outline-none prose prose-sm max-w-none"
+            contentEditable
+            onInput={handleInput}
+          />
+        </div>
+
+        {/* Comments */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">Comments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[300px] w-full rounded-md border p-4">
+                {comments.map((comm, idx) => (
+                  <div key={idx} className="mb-2 rounded-lg bg-muted p-2 text-sm">
+                    {comm}
+                  </div>
+                ))}
+              </ScrollArea>
+              <form onSubmit={handleCommentSubmit} className="mt-4 flex gap-2">
+                <TextareaAutosize
+                  minRows={3}
+                  maxRows={10}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Add a comment..."
+                  className="flex-1 p-2 border border-gray-300 rounded"
+                />
+                <Button type="submit" size="icon">
+                  <span>Send</span>
+                  <span className="sr-only">Send comment</span>
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
