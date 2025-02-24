@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { ChevronDown, ChevronRight, CheckCircle2, PanelLeft } from "lucide-react"
+import ContentForm from '@/components/content-form'
 
 // Mock data for the Motion course
 const courseData = {
@@ -35,7 +36,7 @@ const courseData = {
   ],
 }
 
-export default function CoursePage() {
+function CoursePage() {
   const [expandedChapters, setExpandedChapters] = useState<number[]>([0])
   const [selectedLesson, setSelectedLesson] = useState(courseData.chapters[0].lessons[0])
   const [completedLessons, setCompletedLessons] = useState<string[]>([])
@@ -54,7 +55,7 @@ export default function CoursePage() {
 
   return (
     <div className="relative flex min-h-screen bg-background">
-      {/* Toggle button - Always visible */}
+      {/* Sidebar Toggle */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="fixed top-4 left-4 z-50 p-2 rounded-md hover:bg-accent/50 transition-colors"
@@ -63,7 +64,7 @@ export default function CoursePage() {
         <PanelLeft className="h-5 w-5" />
       </button>
 
-      {/* Sidebar with transition */}
+      {/* Sidebar with Chapters and Lessons */}
       <aside
         className={`fixed top-0 left-0 h-full bg-background border-r border-border transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -99,7 +100,9 @@ export default function CoursePage() {
                             <span className="opacity-60">{lesson.id}</span>
                             <span>{lesson.title}</span>
                           </span>
-                          {completedLessons.includes(lesson.id) && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                          {completedLessons.includes(lesson.id) && (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          )}
                         </button>
                       </li>
                     ))}
@@ -111,17 +114,22 @@ export default function CoursePage() {
         </div>
       </aside>
 
-      {/* Main content - Adjusts padding when sidebar is open */}
-      <main className={`flex-1 transition-[padding] duration-300 ease-in-out ${sidebarOpen ? "pl-[256px]" : "pl-16"}`}>
+      {/* Main Content including the Text Editor */}
+      <main
+        className={`flex-1 transition-[padding] duration-300 ease-in-out ${
+          sidebarOpen ? "pl-[256px]" : "pl-16"
+        }`}
+      >
         <div className="p-8">
           <h1 className="text-3xl font-bold mb-4">{selectedLesson.title}</h1>
-          <p className="text-muted-foreground">
-            This is where the content for lesson {selectedLesson.id}: {selectedLesson.title} would go. You can add text,
-            images, videos, or any other content related to this lesson here.
-          </p>
+          {/* Render ContentForm text editor in the main area */}
+          <ContentForm />
         </div>
       </main>
     </div>
   )
 }
 
+export default function Home() {
+  return <CoursePage />
+}

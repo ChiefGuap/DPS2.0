@@ -18,16 +18,17 @@ export default function LoginPage() {
       setSession(session);
       if (session) {
         const email = session.user.email;
-        if (!email?.endsWith('@ucdavis.edu')) {
-          await supabase.auth.signOut();
-          toast.error('Please use your UC Davis email to sign in');
+        if (!email?.endsWith("@ucdavis.edu")) {
+          toast.error("Please use your UC Davis email to sign in");
+          // Instead of signing out, we clear the session state to allow re-login.
+          setSession(null);
           return;
         }
-        
+
         // Only redirect to stored path, don't fallback to homepage
-        const redirectPath = localStorage.getItem('redirectPath');
+        const redirectPath = localStorage.getItem("redirectPath");
         if (redirectPath) {
-          localStorage.removeItem('redirectPath');
+          localStorage.removeItem("redirectPath");
           router.push(redirectPath);
         }
       }
@@ -40,16 +41,16 @@ export default function LoginPage() {
         setSession(session);
         if (session) {
           const email = session.user.email;
-          if (!email?.endsWith('@ucdavis.edu')) {
-            await supabase.auth.signOut();
-            toast.error('Please use your UC Davis email to sign in');
+          if (!email?.endsWith("@ucdavis.edu")) {
+            toast.error("Please use your UC Davis email to sign in");
+            setSession(null);
             return;
           }
-          
+
           // Only redirect to stored path, don't fallback to homepage
-          const redirectPath = localStorage.getItem('redirectPath');
+          const redirectPath = localStorage.getItem("redirectPath");
           if (redirectPath) {
-            localStorage.removeItem('redirectPath');
+            localStorage.removeItem("redirectPath");
             router.push(redirectPath);
           }
         }
