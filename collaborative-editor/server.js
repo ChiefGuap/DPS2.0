@@ -11,7 +11,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const app = express();
 
-// Integrate CORS middleware with credentials support for Express
 app.use(cors({ 
   origin: 'http://localhost:3000', 
   methods: ['GET', 'POST'],
@@ -42,11 +41,13 @@ io.on('connection', (socket) => {
 
       if (error) {
         console.error(`Error loading document ${docId}:`, error);
-        socket.emit('load-document', '');
+        // Send a default doc as a JSON string
+        socket.emit('load-document', JSON.stringify({ type: "doc", content: [] }));
         return;
       }
 
-      socket.emit('load-document', data?.content || '');
+      const docObj = data?.content || { type: "doc", content: [] };
+      socket.emit('load-document', JSON.stringify(docObj));
     } catch (err) {
       console.error('Unexpected error fetching document:', err);
     }
@@ -59,9 +60,11 @@ io.on('connection', (socket) => {
 
   socket.on('save-document', async ({ docId, content }) => {
     try {
+      // Parse the JSON string into an object before saving
+      const docObj = JSON.parse(content);
       const { error } = await supabase.from('documents').upsert([{ 
         id: docId, 
-        content, 
+        content: docObj, 
         team_id: 1  // team_id added
       }]);
       if (error) {
