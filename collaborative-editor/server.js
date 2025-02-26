@@ -54,8 +54,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('edit-document', ({ docId, content }) => {
-    // Broadcast real-time updates to the document room
-    socket.to(docId).emit('update-document', content);
+    // Broadcast real-time updates to all sockets in the room (including the sender)
+    io.in(docId).emit('update-document', content);
   });
 
   socket.on('save-document', async ({ docId, content }) => {

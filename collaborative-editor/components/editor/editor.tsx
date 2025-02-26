@@ -97,10 +97,8 @@ export default function Editor({ initialValue, onChange }: EditorProps) {
         console.error("Failed to parse updated content, ignoring update", err)
         return
       }
-      if (
-        editorInstance.current &&
-        JSON.stringify(editorInstance.current.getJSON()) !== JSON.stringify(jsonContent)
-      ) {
+      if (editorInstance.current) {
+        // Always update the content regardless of equality
         isRemoteUpdate.current = true
         editorInstance.current.commands.setContent(jsonContent)
         setTimeout(() => {
@@ -114,7 +112,7 @@ export default function Editor({ initialValue, onChange }: EditorProps) {
     }
   }, [])
 
-  // Send local changes (as JSON) via socket, with debounce save to Supabase
+  // Send local changes (as JSON) via socket, with debounced save to Supabase
   const handleEditorUpdate = ({ editor }: { editor: EditorInstance }) => {
     if (!isRemoteUpdate.current) {
       const jsonContent = editor.getJSON()
@@ -126,7 +124,7 @@ export default function Editor({ initialValue, onChange }: EditorProps) {
       }
       saveTimeoutRef.current = setTimeout(() => {
         socketRef.current?.emit("save-document", { docId, content: jsonString })
-      }, 1000)
+      }, 1500)
     }
   }
 
@@ -191,16 +189,12 @@ export default function Editor({ initialValue, onChange }: EditorProps) {
           <EditorMenu open={openAI} onOpenChange={setOpenAI}>
             <Separator orientation="vertical" />
             <NodeSelector open={openNode} onOpenChange={setOpenNode} />
-
             <Separator orientation="vertical" />
             <LinkSelector open={openLink} onOpenChange={setOpenLink} />
-
             <Separator orientation="vertical" />
             <MathSelector />
-
             <Separator orientation="vertical" />
             <TextButtons />
-
             <Separator orientation="vertical" />
             <ColorSelector open={openColor} onOpenChange={setOpenColor} />
           </EditorMenu>
