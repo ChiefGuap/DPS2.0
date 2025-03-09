@@ -17,6 +17,16 @@ export function NavBar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Added the Dashboard link to the navigation array
+  const navLinks = [
+    { href: "/", label: "Home" },
+    { href: "/about", label: "About" },
+    { href: "/apply", label: "Apply" },
+    { href: "/editor", label: "Editor" },
+    { href: "/courses", label: "Courses" },
+    { href: "/dashboard", label: "Dashboard" },
+  ];
+
   return (
     <nav
       className={`fixed top-5 left-1/2 transform -translate-x-1/2 px-6 py-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-md
@@ -24,13 +34,7 @@ export function NavBar() {
       `}
     >
       <div className="flex items-center space-x-6">
-        {[
-          { href: "/", label: "Home" },
-          { href: "/about", label: "About" },
-          { href: "/apply", label: "Apply" },
-          { href: "/editor", label: "Editor" },
-          { href: "/courses", label: "Courses" },
-        ].map(({ href, label }) => (
+        {navLinks.map(({ href, label }) => (
           <Link key={href} href={href} className="relative group">
             {pathname === href && (
               <motion.div

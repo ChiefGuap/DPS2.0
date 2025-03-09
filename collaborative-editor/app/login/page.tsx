@@ -1,4 +1,5 @@
-"use client";
+// app/login/page.tsx
+'use client';
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
@@ -11,7 +12,8 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const getSession = async () => {
+    // Check for an existing session and redirect immediately to /dashboard if found.
+    async function checkSession() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -20,21 +22,13 @@ export default function LoginPage() {
         const email = session.user.email;
         if (!email?.endsWith("@ucdavis.edu")) {
           toast.error("Please use your UC Davis email to sign in");
-          // Instead of signing out, we clear the session state to allow re-login.
-          setSession(null);
+          // Optionally, you might call supabase.auth.signOut() here.
           return;
         }
-
-        // Only redirect to stored path, don't fallback to homepage
-        const redirectPath = localStorage.getItem("redirectPath");
-        if (redirectPath) {
-          localStorage.removeItem("redirectPath");
-          router.push(redirectPath);
-        }
+        router.push('/dashboard');
       }
-    };
-
-    getSession();
+    }
+    checkSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -43,16 +37,9 @@ export default function LoginPage() {
           const email = session.user.email;
           if (!email?.endsWith("@ucdavis.edu")) {
             toast.error("Please use your UC Davis email to sign in");
-            setSession(null);
             return;
           }
-
-          // Only redirect to stored path, don't fallback to homepage
-          const redirectPath = localStorage.getItem("redirectPath");
-          if (redirectPath) {
-            localStorage.removeItem("redirectPath");
-            router.push(redirectPath);
-          }
+          router.push('/dashboard');
         }
       }
     );
@@ -62,9 +49,34 @@ export default function LoginPage() {
     };
   }, [router]);
 
+  async function handleSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    // Use emailRedirectTo instead of redirectTo
+    const { error } = await supabase.auth.signInWithOtp({
+      email: (e.currentTarget as any).email.value,
+      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Check your email for the login link!");
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center">
       <h1 className="text-2xl font-bold mb-4">Sign in</h1>
+      <form onSubmit={handleSignIn} className="mb-4">
+        <input
+          name="email"
+          type="email"
+          placeholder="Your email"
+          className="border p-2 mb-2"
+        />
+        <button type="submit" className="bg-blue-500 text-white p-2">
+          Sign In
+        </button>
+      </form>
       <GoogleLoginButton />
     </div>
   );

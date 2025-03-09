@@ -28,6 +28,9 @@ import { ColorSelector } from "@/components/editor/selectors/color-selector"
 
 import { Separator } from "@/components/ui/separator"
 
+// Import your Supabase client instance. Ensure it’s configured with your anon key.
+import { supabase } from "@/lib/supabaseClient"
+
 const hljs = require("highlight.js")
 
 const extensions = [...defaultExtensions, slashCommand]
@@ -62,14 +65,24 @@ export default function Editor({ initialValue, onChange }: EditorProps) {
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Setup socket RT collab using JSON
+  // Setup socket real-time collaboration using JSON
   useEffect(() => {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5001"
     const socket = io(baseUrl, { transports: ["websocket"] })
-    socketRef.current = socket
-    socket.emit("join-document", docId)
+    socketRef.current = socket;
 
-    // Load initial document content as JSON
+    // Retrieve the token from the current session and emit join-document with an object payload.
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (token) {
+        socket.emit("join-document", { docId, token })
+      } else {
+        console.error("No token found for join-document")
+      }
+    })();
+
+    // When the server sends back the document, parse and load it.
     socket.on("load-document", (serverContent: string) => {
       let jsonContent: JSONContent = defaultEditorContent
       try {
@@ -98,7 +111,6 @@ export default function Editor({ initialValue, onChange }: EditorProps) {
         return
       }
       if (editorInstance.current) {
-        // Always update the content regardless of equality
         isRemoteUpdate.current = true
         editorInstance.current.commands.setContent(jsonContent)
         setTimeout(() => {
@@ -112,23 +124,30 @@ export default function Editor({ initialValue, onChange }: EditorProps) {
     }
   }, [])
 
-  // Send local changes (as JSON) via socket, with debounced save to Supabase
-  const handleEditorUpdate = ({ editor }: { editor: EditorInstance }) => {
+  // Send local changes via socket, with debounced save to the server.
+  const handleEditorUpdate = async ({ editor }: { editor: EditorInstance }) => {
     if (!isRemoteUpdate.current) {
       const jsonContent = editor.getJSON()
       const jsonString = JSON.stringify(jsonContent)
       onChange(jsonString)
-      socketRef.current?.emit("edit-document", { docId, content: jsonString })
+      // Emit edit-document with updated content; server uses stored effective docId.
+      socketRef.current?.emit("edit-document", { content: jsonString })
+
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
-      saveTimeoutRef.current = setTimeout(() => {
-        socketRef.current?.emit("save-document", { docId, content: jsonString })
+      saveTimeoutRef.current = setTimeout(async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
+        if (token) {
+          socketRef.current?.emit("save-document", { docId, content: jsonString, token })
+        } else {
+          console.error("No token found for save-document")
+        }
       }, 1500)
     }
   }
 
-  // Until loaded, show a loading state
   if (!isLoaded) return <div>Loading document...</div>
 
   return (
