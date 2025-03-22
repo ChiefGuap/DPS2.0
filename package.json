@@ -26,6 +26,7 @@
     "ai": "^3.2.36",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "env": "^0.0.2",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "lowlight": "^3.1.0",
